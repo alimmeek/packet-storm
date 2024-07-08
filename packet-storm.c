@@ -15,8 +15,8 @@ void packet_handler(struct pcap_pkthdr *header, const unsigned char *packet) {
     unsigned int i;
     int length = header->len;
     // Decode Packet Header
-    struct ether_header *eth_header = (struct ether_header *) data;
-    printf("\n\n === PACKET %ld HEADER ===", pcount);
+    struct ether_header *eth_header = (struct ether_header *) header;
+    printf("\n\n === PACKET HEADER ===");
     printf("\nSource MAC: ");
     for (i = 0; i < 6; ++i) {
     printf("%02x", eth_header->ether_shost[i]);
