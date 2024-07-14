@@ -10,7 +10,6 @@ TODO:
     - Average packet size
     - Total volume of data received during attack
         - Just the payloads?
-    - Destination IPs ranked by frequency (most frequent first)
     - No. packets sent with different transport layer protocols
     - Verbose option (will also print results to console)
         - Default is just a .txt file to make sharing results easier
@@ -28,6 +27,84 @@ typedef struct list_node {
 
 list_t *head = NULL;
 int unique_ips = 0;
+
+
+list_t *SortedMerge(list_t *a, list_t *b);
+
+void FrontBackSplit(list_t *source, list_t **frontRef, list_t **backRef);
+
+/* sorts the linked list by changing next pointers (not data) */
+void MergeSort(list_t **head_pointer) {
+    list_t *h = *head_pointer;
+    list_t *a;
+    list_t *b;
+
+    /* Base case -- length 0 or 1 */
+    if ((h == NULL) || (h->next == NULL)) {
+        return;
+    }
+
+    /* Split head into 'a' and 'b' sublists */
+    FrontBackSplit(h, &a, &b);
+
+    /* Recursively sort the sublists */
+    MergeSort(&a);
+    MergeSort(&b);
+
+    /* answer = merge the two sorted lists together */
+    *head_pointer = SortedMerge(a, b);
+}
+
+/* See https://www.geeksforgeeks.org/merge-two-sorted-linked-lists/
+for details of this function */
+list_t *SortedMerge(list_t *a, list_t *b) {
+    list_t *result = NULL;
+
+    /* Base cases */
+    if (a == NULL)
+        return (b);
+    else if (b == NULL)
+        return (a);
+
+    /* Pick either a or b, and recur */
+    if (a->node.count >= b->node.count) {
+        result = a;
+        result->next = SortedMerge(a->next, b);
+    }
+    else {
+        result = b;
+        result->next = SortedMerge(a, b->next);
+    }
+    return result;
+}
+
+/* UTILITY FUNCTIONS */
+/* Split the nodes of the given list into front and back halves,
+    and return the two lists using the reference parameters.
+    If the length is odd, the extra node should go in the front list.
+    Uses the fast/slow pointer strategy. */
+void FrontBackSplit(list_t *source, list_t **frontRef, list_t **backRef)
+{
+    list_t *fast;
+    list_t *slow;
+    slow = source;
+    fast = source->next;
+
+    /* Advance 'fast' two nodes, and advance 'slow' one node */
+    while (fast != NULL) {
+        fast = fast->next;
+        if (fast != NULL) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    /* 'slow' is before the midpoint in the list, so split it in two
+    at that point. */
+    *frontRef = source;
+    *backRef = slow->next;
+    slow->next = NULL;
+}
 
 
 void packet_handler(struct pcap_pkthdr *header, const unsigned char *packet) {
@@ -112,13 +189,9 @@ int main() {
     // "A value of -1 or 0 for cnt causes all the packets received in one buffer to be processed when reading a live capture and causes all the packets in a file to be processed when reading a savefile"
     pcap_loop(handle, -1, (void*) &packet_init, NULL);
 
+    MergeSort(&head);
+
     print_list();
-
-    //merge_sort(root, 0, unique_ips-1);
-
-    // unsigned int root_ip = head->node.addr;
-
-    // printf("Most frequent IP address: %d.%d.%d.%d\n", (root_ip >> 24) & 0xFF, (root_ip >> 16) & 0xFF, (root_ip >> 8) & 0xFF, root_ip & 0xFF);
 
     return 0;
 }
