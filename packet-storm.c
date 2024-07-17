@@ -3,18 +3,19 @@
 #include <pcap.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
 #include <string.h>
 #include <inttypes.h>
 
-#define NUM_PACKETS 1000000
+#define TCP 6
+#define UDP 17
+#define UDP_HEADER_LENGTH 8
 
 /*
 TODO:
 MUST
-    - Average packet size
-    - Total volume of data received during attack
-        - Just the payloads?
-    - No. packets sent with different transport layer protocols
+
 SHOULD
     - Multithreading
     - Separate code out into different files/functions
@@ -36,16 +37,14 @@ typedef struct list_node {
     node_t node;
 } list_t;
 
-typedef struct int_list_node {
-    struct int_list_node *next;
-    uint8_t protocol;
-} int_list_t;
 
 list_t *ips_head = NULL;
-int_list_t *protocol_head = NULL;
 int unique_ips = 0;
-int unique_protcols = 0;
+int tcp_count = 0;
+int udp_count = 0;
 int packets_count = 0;
+int average_size = 0;
+int total_payload = 0;
 
 list_t *SortedMerge(list_t *a, list_t *b);
 
@@ -126,6 +125,9 @@ void FrontBackSplit(list_t *source, list_t **frontRef, list_t **backRef)
 
 
 void packet_handler(struct pcap_pkthdr *header, const unsigned char *packet) {
+
+    average_size += header->len;
+
     struct ether_header *eth_header = (struct ether_header *) packet;
 
     if (ntohs(eth_header->ether_type) == ETH_P_IP) {
@@ -180,42 +182,15 @@ void packet_handler(struct pcap_pkthdr *header, const unsigned char *packet) {
             }
         }
 
-        int_list_t **protocol_head_ptr = &protocol_head;
+        unsigned int size_ip = ip_hdr->ip_hl;
 
-        if (unique_protcols == 0) {
-            int_list_t *temp = (int_list_t *) malloc(sizeof(int_list_t));
-
-            temp->next = NULL;
-            temp->protocol = ip_hdr->ip_p;
-
-            *protocol_head_ptr = temp;
-
-            unique_protcols++;
-        } else {
-            int_list_t *prev = NULL;
-            int_list_t *curr = *protocol_head_ptr;
-            int found = 0;
-
-            while (curr != NULL) {
-                prev = curr;
-                if (curr->protocol == ip_hdr->ip_p) {
-                    found = 1;
-                    break;
-                }
-                curr = curr->next;
-            }
-
-            if (found == 0) {
-                int_list_t *temp = (int_list_t *) malloc(sizeof(int_list_t));
-
-                temp->next = *protocol_head_ptr;
-                temp->protocol = ip_hdr->ip_p;
-
-                *protocol_head_ptr = temp;
-
-                unique_protcols++;
-                // printf("New protocol encountered: %" PRIu8 "\n", ip->protocol);
-            }
+        if (ip_hdr->ip_p == TCP) {
+            struct tcphdr *tcp = (struct tcphdr*) (packet + ETH_HLEN + size_ip*4);
+            tcp_count++;
+            total_payload += (header->len) - (ETH_HLEN + size_ip*4 + (tcp->th_off)*4);
+        } else if (ip_hdr->ip_p == UDP) {
+            udp_count++;
+            total_payload += (header->len) - (ETH_HLEN + size_ip*4 + UDP_HEADER_LENGTH);
         }
     }
 }
@@ -233,6 +208,7 @@ void packet_init(unsigned char * args, struct pcap_pkthdr *header, const unsigne
     if (packets_count % 100000 == 0) {
         printf("%d00000 packets analysed\n", packets_count / 100000);
     }
+
 }
 
 void print_ips() {
@@ -246,16 +222,6 @@ void print_ips() {
     }
 }
 
-void print_protocols() {
-    int_list_t *prev = NULL;
-    int_list_t *curr = protocol_head;
-    
-    while (curr != NULL) {
-        prev = curr;
-        printf("%u\n", curr->protocol);
-        curr = curr->next;
-    }
-}
 
 int main() {
     char error_buffer[PCAP_ERRBUF_SIZE];
@@ -266,10 +232,14 @@ int main() {
     pcap_loop(handle, -1, (void *) &packet_init, NULL);
 
     MergeSort(&ips_head);
+    average_size = average_size / packets_count;
     printf("\n");
 
-    printf("Number of unique IP addresses: %d\n", unique_ips);
-    printf("Number of unique protocols: %d\n", unique_protcols);
+    printf("Most frequent IP address: %s \t Count: %d\n", ips_head->node.addr, ips_head->node.count);
+    printf("Number of packets sent with TCP: %d\n", tcp_count);
+    printf("Number of packets sent with UDP: %d\n", udp_count);
+    printf("Total payload: %d bytes\n", total_payload);
+    printf("Average size of packets received: %d bytes\n", average_size);
 
     return 0;
 }
