@@ -1,19 +1,16 @@
 #include <pcap.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+#include <string.h>
 
 #include "types.h"
+#include "analysis.h"
 #include "util.h"
-
-int thread_count = MAX_THREADS;       // number of threads available
-pthread_t threads[MAX_THREADS];       // threads
-pthread_mutex_t threads_mutex = PTHREAD_MUTEX_INITIALIZER;    // mutex lock for available_indices
-pthread_cond_t no_threads_cond = PTHREAD_COND_INITIALIZER;    // signals a thread is available
-pthread_mutex_t ip_list_mutex = PTHREAD_MUTEX_INITIALIZER;
-extern int available_indices[MAX_THREADS];
+#include "globals.h"
 
 
 void *packet_handler(void *_i) {

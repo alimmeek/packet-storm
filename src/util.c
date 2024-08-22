@@ -1,19 +1,17 @@
 #include <stdlib.h>
 #include <netinet/ip.h>
+#include <string.h>
 
 #include "types.h"
+#include "globals.h"
 
-extern int tcp_count;
-extern int udp_count;
-extern int total_payload;
-extern double average_size;
 
 void print_stats(FILE *f) {
     fprintf(f, "Most frequent IP address: %s \t Count: %d\n", ips_head->node.addr, ips_head->node.count);
     fprintf(f, "Number of packets sent with TCP: %d\n", tcp_count);
     fprintf(f, "Number of packets sent with UDP: %d\n", udp_count);
     fprintf(f, "Total payload: %d bytes\n", total_payload);
-    fprintf(f, "Average size of packets received: %d bytes\n", average_size);
+    fprintf(f, "Average size of packets received: %f bytes\n", average_size);
 }
 
 void write_to_file(char *filename) {
@@ -29,6 +27,7 @@ void write_to_file(char *filename) {
         printf("\n");
 
         print_stats(f);
+        fclose(f);
     }
 }
 
@@ -44,6 +43,7 @@ void create_list_node(struct ip *ip_hdr, list_t **head_pointer) {
 
     *head_pointer = temp;
     unique_ips++;
+
 }
 
 list_t *sorted_merge(list_t *a, list_t *b);

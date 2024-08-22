@@ -1,14 +1,14 @@
 PRODUCT := packet-storm
-BUILDDIR := ../build
+BUILDDIR := ./build
 
-HDRS := $(wildcard ./*.h)
-SRCS := $(wildcard ./*.c)
+HDRS := $(wildcard ./src/*.h)
+SRCS := $(wildcard ./src/*.c)
 BINARY := $(BUILDDIR)/$(PRODUCT)
 OBJS := $(SRCS:./%.c=$(BUILDDIR)/%.o)
 
-CC:=gcc
+CC := gcc
 
-CFLAGS := -g -DDEBUG -Wall
+CFLAGS := -O3
 LDFLAGS := -lpthread -lpcap
 
 .PHONY: all clean
