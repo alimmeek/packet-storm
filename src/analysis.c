@@ -17,7 +17,8 @@
  * This file performs the analysis on the packets
 */
 
-// analyses the packets
+
+// collects required info from packets
 void *packet_handler(void *_i) {
 
     // get the packet and header of this packet

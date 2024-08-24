@@ -35,15 +35,6 @@ int packets_count = 0;                                     // number of packets 
 double average_size = 0;                                   // stores the total length (including headers) of all packets received, then the average across these packets
 int total_payload = 0;                                     // stores the total length of the payloads (so no headers)
 
-/*
-TODO:
-MUST
-
-SHOULD
-
-COULD
-    - .sh run script which has nproc
-*/
 
 int main() {
 

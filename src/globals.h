@@ -4,6 +4,11 @@
 #include <pthread.h>
 #include "types.h"
 
+
+/*
+ * This file defines macros and makes global variables available across files
+*/
+
 #define TCP 6
 #define UDP 17
 #define UDP_HEADER_LENGTH 8
