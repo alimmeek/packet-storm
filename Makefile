@@ -8,7 +8,7 @@ OBJS := $(SRCS:./%.c=$(BUILDDIR)/%.o)
 
 CC := gcc
 
-CFLAGS := -O3
+CFLAGS := -O3 -D"MAX_THREADS=${PROC_COUNT}" -Wno-unused-result
 LDFLAGS := -lpthread -lpcap
 
 .PHONY: all clean
@@ -27,7 +27,7 @@ $(BINARY): $(OBJS)
 $(BUILDDIR)/%.o : ./%.c
 	@echo compiling $<
 	$(maketargetdir)
-	$(CC) $(CFLAGS) $(CINCLUDES) -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 define maketargetdir
 	-@mkdir -p $(dir $@) > /dev/null 2>&1

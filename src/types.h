@@ -3,6 +3,11 @@
 
 #include <pcap.h>
 
+
+/*
+ * This file contains type definitions
+*/
+
 typedef struct node {
     char *addr;
     int count;
@@ -13,9 +18,9 @@ typedef struct list_node {
     node_t node;
 } list_t;
 
-typedef struct Param {
+typedef struct param_t {
   struct pcap_pkthdr *header;
   const unsigned char *packet;
-} Param;
+} param_t;
 
 #endif

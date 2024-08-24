@@ -3,6 +3,8 @@
 
 #include <netinet/ip.h>
 
+void mthread_setup();
+void free_list();
 void print_stats(FILE *f);
 void write_to_file(char *filename);
 void create_list_node(struct ip *ip_hdr, list_t **head_pointer);

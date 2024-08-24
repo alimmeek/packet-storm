@@ -13,23 +13,35 @@
 #include "globals.h"
 
 
+/*
+ * This file performs the analysis on the packets
+*/
+
+// analyses the packets
 void *packet_handler(void *_i) {
-    Param a = *((Param *) _i);
+
+    // get the packet and header of this packet
+    param_t a = *((param_t *) _i);
 
     struct pcap_pkthdr *header = a.header;
     const unsigned char *packet = a.packet;
 
+    // add packet size
     average_size += header->len;
 
     struct ether_header *eth_header = (struct ether_header *) packet;
 
+    // check whether we've seen this IP address before
     if (ntohs(eth_header->ether_type) == ETH_P_IP) {
         struct ip *ip_hdr = (struct ip *) (packet + ETH_HLEN);
 
+        // traversing the IP list has to be sequential so we don't add to the list while another thread is reading it
+        // this could lead to repeats in the list
         pthread_mutex_lock(&ip_list_mutex);
         list_t **head_pointer = &ips_head;
 
         if (unique_ips == 0) {
+            // no list to traverse, so just add the node to the head
             create_list_node(ip_hdr, head_pointer);
         } else {
             list_t *curr = *head_pointer;
@@ -39,6 +51,7 @@ void *packet_handler(void *_i) {
             strcpy(addr, inet_ntoa(ip_hdr->ip_dst));
 
             while (curr != NULL) {
+                // if yes, increment the counter for this address's node and exit the list
                 if (strcmp(curr->node.addr, addr) == 0) {
                     curr->node.count++;
                     found = 1;
@@ -47,6 +60,7 @@ void *packet_handler(void *_i) {
                 curr = curr->next;
             }
 
+            // otherwise, add this node to the head of the list
             if (found == 0) {
                 create_list_node(ip_hdr, head_pointer);
             }
@@ -55,6 +69,7 @@ void *packet_handler(void *_i) {
 
         unsigned int size_ip = ip_hdr->ip_hl;
 
+        // check the transport layer protocol being used and calculate the size of the payload accordingly
         if (ip_hdr->ip_p == TCP) {
             struct tcphdr *tcp = (struct tcphdr*) (packet + ETH_HLEN + size_ip*4);
             tcp_count++;
@@ -66,14 +81,17 @@ void *packet_handler(void *_i) {
     }
 }
 
+
+// allocates the captured packet to a thread
 void packet_init(unsigned char * args, struct pcap_pkthdr *header, const unsigned char *packet) {
     struct pcap_pkthdr *pkt_header = (struct pcap_pkthdr *) malloc(sizeof(header));
     unsigned char *pkt_packet = (unsigned char *) malloc(sizeof(packet)); 
 
+    // copy the packet into its own area of memory and create a struct to hold both the header and packet
     memcpy((void *) &pkt_header, &header, sizeof(header));
     memcpy((void *) &pkt_packet, &packet, sizeof(packet));
 
-    Param a_p = {pkt_header, pkt_packet};
+    param_t a_p = {pkt_header, pkt_packet};
 
     // if threads are available, acquire mutex lock for available_threads, otherwise wait
     if (thread_count > 0) {
@@ -106,6 +124,8 @@ void packet_init(unsigned char * args, struct pcap_pkthdr *header, const unsigne
     pthread_cond_signal(&no_threads_cond);
     pthread_mutex_unlock(&threads_mutex);
 
+
+    // "Progress bar"
     packets_count++;
     if (packets_count % 100000 == 0) {
         printf("%d00000 packets analysed\n", packets_count / 100000);
