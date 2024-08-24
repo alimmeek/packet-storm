@@ -21,14 +21,14 @@ pthread_t threads[MAX_THREADS];       // threads
 pthread_mutex_t threads_mutex = PTHREAD_MUTEX_INITIALIZER;    // mutex lock for available_indices
 pthread_cond_t no_threads_cond = PTHREAD_COND_INITIALIZER;    // signals a thread is available
 pthread_mutex_t ip_list_mutex = PTHREAD_MUTEX_INITIALIZER;
-int available_indices[MAX_THREADS];
-list_t *ips_head = NULL;
-int unique_ips = 0;
-int tcp_count = 0;
-int udp_count = 0;
-int packets_count = 0;
-double average_size = 0;
-int total_payload = 0;
+int available_indices[MAX_THREADS];    // queue of available threads
+list_t *ips_head = NULL;    // pointer to the head of a linked list of all previously seen IP addresses
+int unique_ips = 0;    // length of the ip list
+int tcp_count = 0;    // number of packets with the TCP protocol
+int udp_count = 0;    // number of packets with the UDP protocol
+int packets_count = 0;    // number of packets analysed
+double average_size = 0;  // stores the total length (i.e., including headers) of all packets received, then the average across these packets
+int total_payload = 0;    // stores the total length of the payloads (so no headers)
 
 /*
 TODO:
@@ -37,8 +37,6 @@ MUST
 SHOULD
 
 COULD
-    - Text file option (will also print results to console)
-        - -t to create a .txt file to make sharing results easier
     - some sort of CLI so they're not just waiting on my code running (e.g. progress bar)
 */
 
@@ -47,6 +45,7 @@ void mthread_setup() {  // initialises available_indices to store its current in
     available_indices[i] = i;
   }
 }
+
 
 void free_list() {
   list_t *prev = NULL;
@@ -62,14 +61,16 @@ void free_list() {
 
 
 int main() {
-    clock_t start, stop;
     char error_buffer[PCAP_ERRBUF_SIZE];
-
-    start = clock();
 
     mthread_setup();
     
-    pcap_t *handle = pcap_open_offline("packet-storm.pcap", error_buffer);
+    pcap_t *handle;
+
+    if ((handle = pcap_open_offline("packet-storm.pcap", error_buffer)) == NULL) {
+      printf("Error: unable to open .pcap file");
+      exit(1);
+    }
 
     // "A value of -1 or 0 for cnt causes all the packets received in one buffer to be processed when reading a live capture and causes all the packets in a file to be processed when reading a savefile"
     pcap_loop(handle, -1, (void *) &packet_init, NULL);
@@ -79,14 +80,22 @@ int main() {
     printf("\n");
 
     print_stats(stdout);
-    write_to_file("results.txt");
+
+    char choice_buff[100];
+    char choice;
+
+    do {
+      printf("Write results to file? [y/n] ");
+      fgets(choice_buff, 100, stdin);
+      choice = choice_buff[0];
+    } while ((choice != 'y') && (choice != 'n'));
+
+    if (choice == 'y') {
+      write_to_file("results.txt");
+    }
 
     pcap_close(handle);
     free_list();
-
-    stop = clock();
-
-    printf("Program run time: %f seconds \n", (double) (stop - start) / CLOCKS_PER_SEC);
 
     return 0;
 }

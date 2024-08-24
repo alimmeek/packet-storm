@@ -7,7 +7,7 @@
 
 
 void print_stats(FILE *f) {
-    fprintf(f, "Most frequent IP address: %s \t Count: %d\n", ips_head->node.addr, ips_head->node.count);
+    fprintf(f, "Most frequent IP address: %s    Count: %d\n", ips_head->node.addr, ips_head->node.count);
     fprintf(f, "Number of packets sent with TCP: %d\n", tcp_count);
     fprintf(f, "Number of packets sent with UDP: %d\n", udp_count);
     fprintf(f, "Total payload: %d bytes\n", total_payload);
@@ -16,6 +16,22 @@ void print_stats(FILE *f) {
 
 void write_to_file(char *filename) {
     FILE *f;
+
+    if ((f = fopen(filename, "r")) != NULL) {
+        fclose(f);
+
+        char choice_buff[100];
+        char choice;
+        do {
+            printf("WARNING: %s already exists. Overwrite? [y/n] ", filename);
+            fgets(choice_buff, 100, stdin);
+            choice = choice_buff[0];
+        } while ((choice != 'y') && (choice != 'n'));
+
+        if (choice == 'n') {
+            return;
+        }
+    }
 
     if ((f = fopen(filename, "w")) != NULL) {
         list_t *curr = ips_head;
